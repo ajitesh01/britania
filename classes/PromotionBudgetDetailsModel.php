@@ -34,7 +34,10 @@ class PromotionBudgetDetailsModel extends BaseModel {
                 $channelname                    = isset($request->channelname)?$request->channelname:null;
                 $PromotionDetails               = isset($request->PromotionDetail)?$request->PromotionDetail:null;
                 $applawcodes                    = isset($request->Promotionaws)?$request->Promotionaws:null;
+            
 
+ 
+                
 
                 if(IsNullOrEmptyString($Pmonth) || 
                     IsNullOrEmptyString($Pyear) || 
@@ -52,6 +55,9 @@ class PromotionBudgetDetailsModel extends BaseModel {
                     $this->responseMis($res);
                 }else{
 
+
+                    $SaleUOMHash=["PKT"=>1,"AMT"=>2,"KG"=>3,"Lines"=>4,"CBB"=>5,"ECO"=>6,"Points"=>7];
+                  
                     # insert into PromotionBudgetDetails
                     $params1 = array(
                         $Pmonth, 
@@ -74,13 +80,32 @@ class PromotionBudgetDetailsModel extends BaseModel {
                         $AllChannel,
                         $QPS,
                         $KAT
+
                     );
                     $tsql1 = "INSERT PromotionBudgetDetails (Pmonth, Pyear, OnSaleOffValue, Limit, ValidityFrom,ValidityTo,SaleUOM,Onsaleoff,Remarks, TSIID, ProfitCenter,CustomerGroup,BudgetType,Description,Brand,FutureChilds,AllChannel,QPS,KAT) OUTPUT INSERTED.RowID VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
                     $promotions = $this->dbw->query($tsql1, $params1);
                     $budgetId = $promotions->resultArrayList;
 
+
+
+                    $promotionBudgetTableRowId=$budgetId[0]['RowID'];
+                    $promotionCode='CC'.$promotionBudgetTableRowId;
+                    $objectiveType=300901;
+                    $SaleUOMUpdate=$SaleUOMHash[$SaleUOM];
+
+                    $customerValueSql="select DISTINCT ASM_code from viw_Customermaster where ASM_Name  LIKE '".$TSIID."' ";
+                    $customerValue=$this->dbw->query($customerValueSql);
+                    $customerValueResult=$customerValue->resultArrayList;
+                    
+
                     # insert into PromotionChannels
                     $params2 = array($budgetId[0]['RowID'], $channelname);
+
+                   
+
+
+                
+                    //ObjectiveType
                     $tsql2 = "INSERT PromotionChannels (BudgetPromotionId, channelname) OUTPUT INSERTED.RowID VALUES (?,?)";
                     $promotionsChannel = $this->dbw->query($tsql2, $params2);
                     $channelId = $promotionsChannel->resultArrayList;
