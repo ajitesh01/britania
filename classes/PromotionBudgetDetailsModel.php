@@ -34,7 +34,10 @@ class PromotionBudgetDetailsModel extends BaseModel {
                 $channelname                    = isset($request->channelname)?$request->channelname:null;
                 $PromotionDetails               = isset($request->PromotionDetail)?$request->PromotionDetail:null;
                 $applawcodes                    = isset($request->Promotionaws)?$request->Promotionaws:null;
+            
 
+ 
+                
 
                 if(IsNullOrEmptyString($Pmonth) || 
                     IsNullOrEmptyString($Pyear) || 
@@ -52,6 +55,35 @@ class PromotionBudgetDetailsModel extends BaseModel {
                     $this->responseMis($res);
                 }else{
 
+
+                    $SaleUOMHash=["PKT"=>1,"AMT"=>2,"KG"=>3,"Lines"=>4,"CBB"=>5,"ECO"=>6,"Points"=>7];
+                    $SaleUOMUpdate=$SaleUOMHash[$SaleUOM];
+                    $objectiveValue=$Limit;
+                    $SchemeType='E';
+                    $SalesAccount="Trade Load";
+                    $PromotionStatus='O';
+                    $CreatedBy='1010101';
+                    $customerValueSql="select DISTINCT ASM_code from viw_Customermaster where ASM_Name  LIKE '%".$TSIID."%' ";
+                    $customerValue=$this->dbw->query($customerValueSql);
+                    $customerValueResult=$customerValue->resultArrayList;
+                    $CustomerValue=$customerValueResult[0]['ASM_code'];
+                    $OnSaleOffType='4';
+                    $Createddate=date('Y-m-d H:i:s');
+                    $UpdatedDate=date('Y-m-d H:i:s');
+                    $ObjectiveType=300901;
+                    
+                    $brandQuery="select Brand from VIW_CCProductMaster where Brand_Name like '%".$Brand."%' ";
+                    //$brandQuery="select Brand from VIW_CCProductMaster where Brand_Name like '%Bourbon%'"
+                    $brandQueryExec=$this->dbw->query($brandQuery);
+                    $brandResult=$brandQueryExec->resultArrayList;
+
+                    $Brand_Names="";
+                    foreach($brandResult as $key=>$value){
+                        $Brand_Names.=($value['Brand'].",");
+                    }
+
+                    $OnSaleOffValue=$Brand_Names;
+
                     # insert into PromotionBudgetDetails
                     $params1 = array(
                         $Pmonth, 
@@ -60,11 +92,10 @@ class PromotionBudgetDetailsModel extends BaseModel {
                         $Limit, 
                         $ValidityFrom, 
                         $ValidityTo, 
-                        $SaleUOM, 
+                        $SaleUOMUpdate, 
                         $OnSaleOff, 
                         $Remarks, 
                         $TSIID,
-
                         $ProfitCenter,
                         $CustomerGroup,
                         $BudgetType,
@@ -73,52 +104,157 @@ class PromotionBudgetDetailsModel extends BaseModel {
                         $FutureChilds,
                         $AllChannel,
                         $QPS,
-                        $KAT
+                        $KAT,
+                        $objectiveValue,
+                        $SchemeType,
+                        $SalesAccount,
+                        $PromotionStatus,
+                        $CreatedBy,
+                        $CustomerValue,
+                        $OnSaleOffType,
+                        $Createddate,
+                        $UpdatedDate ,
+                        $ObjectiveType
                     );
-                    $tsql1 = "INSERT PromotionBudgetDetails (Pmonth, Pyear, OnSaleOffValue, Limit, ValidityFrom,ValidityTo,SaleUOM,Onsaleoff,Remarks, TSIID, ProfitCenter,CustomerGroup,BudgetType,Description,Brand,FutureChilds,AllChannel,QPS,KAT) OUTPUT INSERTED.RowID VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-                    $promotions = $this->dbw->query($tsql1, $params1);
-                    $budgetId = $promotions->resultArrayList;
 
-                    # insert into PromotionChannels
-                    $params2 = array($budgetId[0]['RowID'], $channelname);
-                    $tsql2 = "INSERT PromotionChannels (BudgetPromotionId, channelname) OUTPUT INSERTED.RowID VALUES (?,?)";
+                $tsql1 = "INSERT PromotionBudgetDetails (Pmonth, Pyear, OnSaleOffValue, Limit, ValidityFrom,ValidityTo,SaleUOM,Onsaleoff,Remarks, TSIID, ProfitCenter,CustomerGroup,BudgetType,Description,Brand,FutureChilds,AllChannel,QPS,KAT,ObjectiveValue,SchemeType,SalesAccount,PromotionStatus,CreatedBy,CustomerValue,OnSaleOffType,Createddate,UpdatedDate,ObjectiveType) OUTPUT INSERTED.RowID VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                $promotions = $this->dbw->query($tsql1, $params1);
+                $budgetId = $promotions->resultArrayList;
+                $promotionBudgetTableRowId=$budgetId[0]['RowID'];
+                $promotionCode='CC'.$promotionBudgetTableRowId;
+                $paramsPromo=[$promotionCode,$promotionBudgetTableRowId];
+                $updatePromoCodeQuery="UPDATE PromotionBudgetDetails SET PromotionCode=? WHERE RowID=?";
+                $updatePromotCodeExec=$this->dbw->query($updatePromoCodeQuery, $paramsPromo);
+                $GT_Array=[118,119,120,121,122,123,124,125,126,127];
+                $channelIds=[];
+                $tsql2 = "INSERT PromotionChannels (BudgetPromotionId, channelname,channelcode,CreatedDate,UpdatedDate,CreatedBy,ChannelAttributes,promocode) OUTPUT INSERTED.RowID VALUES (?,?,?,?,?,?,?,?)";
+                if($channelname=="GT"){
+                    $ChannelAttributes=10055;
+                    foreach($GT_Array as $value){
+                        $params2 = array($budgetId[0]['RowID'], $channelname,$value,$Createddate,$UpdatedDate,$CreatedBy,$ChannelAttributes,$promotionCode);
+                        $promotionsChannel = $this->dbw->query($tsql2, $params2);
+                        $channelId = $promotionsChannel->resultArrayList;
+                        $channelIds[]=$channelId[0]['RowID'];
+                    }
+                }
+                else if($channelname=="Wholesale"){
+                    $ChannelAttributes=10055;
+                    $params2 = array($budgetId[0]['RowID'], $channelname,128,$Createddate,$UpdatedDate,$CreatedBy,$ChannelAttributes,$promotionCode);
                     $promotionsChannel = $this->dbw->query($tsql2, $params2);
                     $channelId = $promotionsChannel->resultArrayList;
+                    $channelIds[]=$channelId[0]['RowID'];
+                }
+                else{
+                    $ChannelAttributes=NULL;
+                    $params2 = array($budgetId[0]['RowID'], $channelname,10085,$Createddate,$UpdatedDate,$CreatedBy,$ChannelAttributes,$promotionCode);
+                    $promotionsChannel = $this->dbw->query($tsql2, $params2);
+                    $channelId = $promotionsChannel->resultArrayList;
+                    $channelIds[]=$channelId[0]['RowID'];
+                }
+
+
+                
+                    //ObjectiveType
+                $tsql2 = "INSERT PromotionChannels (BudgetPromotionId, channelname) OUTPUT INSERTED.RowID VALUES (?,?)";
+                $promotionsChannel = $this->dbw->query($tsql2, $params2);
+                $channelId = $promotionsChannel->resultArrayList;
+
+
+         
+               
+                //$SlabQtyFrom=$PromotionDetail->SalePkt;
 
                     #insert into PROMOTIONDETAIL
+                    $applawCodes="";
                     $detailsIds = [];
-                    foreach($PromotionDetails as $PromotionDetail){
+                    foreach($applawcodes as $applawcode){
+                        $applawCodes.=($applawcode->applawcode.",");
+                    }
+                    
+                    foreach($PromotionDetails as $key=>$PromotionDetail){
+                        $PromotionTypeHash=['DISCOUNT %'=>1,'Discount Amount'=>2,'Free SKU'=>3,'Free Article'=>4,'Free SKU Group'=>5,'Scratch Card'=>6];
+                        $PromotionTypeText=isset($PromotionDetail->PromotionType)?$PromotionDetail->PromotionType:null;
+			$PromotionType=$PromotionTypeHash[$PromotionTypeText];
+			$slabQtyTo=isset($PromotionDetails[($key+1)])?($PromotionDetails[($key+1)])->SlabQtyTo:999999999;
+			
                         $params3 = array(
-                                $budgetId[0]['RowID'],
-                                isset($PromotionDetail->SlabQtyTo)?$PromotionDetail->SlabQtyTo:null,
-                                isset($PromotionDetail->PromotionType)?$PromotionDetail->PromotionType:null,
+				                $budgetId[0]['RowID'],
+				                $slabQtyTo,
+                                $PromotionType,
                                 isset($PromotionDetail->SalePkt)?$PromotionDetail->SalePkt:null,
                                 isset($PromotionDetail->FreePkt)?$PromotionDetail->FreePkt:null,
                                 isset($PromotionDetail->FreeSku)?$PromotionDetail->FreeSku:null,
                                 isset($PromotionDetail->Slab)?$PromotionDetail->Slab:null,
                                 isset($PromotionDetail->FreeUom)?$PromotionDetail->FreeUom:null,
-                                isset($PromotionDetail->ReimbPrice)?$PromotionDetail->ReimbPrice:null
+                                isset($PromotionDetail->ReimbPrice)?$PromotionDetail->ReimbPrice:null,
+                                isset($PromotionDetail->SalePkt)?$PromotionDetail->SalePkt:null,
+                                $applawCodes
                             );
-                        $tsql3 = "INSERT PromotionDetail (BudgetPromotionId, SlabQtyTo, PromotionType, SalePkt, FreePkt, FreeSku, Slab, FreeUom, ReimbPrice)  OUTPUT INSERTED.RowID VALUES (?,?,?,?,?,?,?,?,?)";
+                        $tsql3 = "INSERT PromotionDetail (BudgetPromotionId, SlabQtyTo, PromotionType, SalePkt, FreePkt, FreeSku, Slab, FreeUom, ReimbPrice,SlabQtyFrom,Customerid)  OUTPUT INSERTED.RowID VALUES (?,?,?,?,?,?,?,?,?,?,?)";
                         $res3 = $this->dbw->query($tsql3, $params3);
                         $detailsId = $res3->resultArrayList;
                         $detailsIds[] = $detailsId[0]['RowID'];
                     }
-                    #insert into Promotionaws
+                    $ASMCodeSQL=" select DISTINCT ASM_code from viw_Customermaster where ASM_Name  LIKE '%".$TSIID."%' ";
+                    $TisCodeSqlQuery="select distinct TSI_code from Viw_customermaster where ASM_code in ($ASMCodeSQL)";
+                    $TisCodeQuery=$this->dbw->query($TisCodeSqlQuery);
+                    $TisCodeResultList=$TisCodeQuery->resultArrayList;
+                    $TISRESULT="";
+                    foreach($TisCodeResultList as $key=>$value){
+                        $TISRESULT.=($value['TSI_code'].",");
+                    }
+
+                    $SomQuery="select distinct  SOM_Code from Viw_customermaster where ASM_code in ($ASMCodeSQL)";
+                    $SomQuery=$this->dbw->query($SomQuery);
+                    $SomQueryList=$SomQuery->resultArrayList;
+                    $SomResult="";
+                    foreach($SomQueryList as $key=>$value){
+                        $SomResult.=($value['SOM_Code'].",");
+                    }
+
+                $RSM_Query="select distinct  Region_code  from Viw_customermaster where ASM_code in ($ASMCodeSQL)";
+                $RSM_Query=$this->dbw->query($RSM_Query);
+                $RSM_Query_List=$RSM_Query->resultArrayList;
+                $RSM_Code="";
+                foreach($RSM_Query_List as $key=>$value){
+                  $RSM_Code.=($value['Region_code'].",");
+                }
+
+             $ASM_Code_Query="select distinct  ASM_code  from Viw_customermaster where ASM_code in ($ASMCodeSQL)";
+             $AsmCodeExec=$this->dbw->query($ASM_Code_Query);
+             $Asm_Code_Result=$AsmCodeExec->resultArrayList;
+             $Asm_Code=$Asm_Code_Result[0]['ASM_code'];
+
+
+                  #insert into Promotionaws
                     $applawcodeIds = [];
                     foreach($applawcodes as $applawcode){
                         $params4 = array(
                             $budgetId[0]['RowID'],
                             isset($applawcode->applawcode)?$applawcode->applawcode:null,
-                            isset($applawcode->Amt)?$applawcode->Amt:null
+                            isset($applawcode->Amt)?$applawcode->Amt:null,
+                            $CustomerValue,
+                            $Createddate,
+                            $UpdatedDate,
+                            $CreatedBy,
+                            $TISRESULT,
+                            $SomResult,
+                            $RSM_Code,
+                            $Asm_Code,
+                            $promotionCode
                         );
-                        $tsql4 = "INSERT Promotionaws (BudgetPromotionId, applawcode, Amt) OUTPUT INSERTED.RowID VALUES (?,?,?)";
+                        $tsql4 = "INSERT Promotionaws (BudgetPromotionId, applawcode, Amt,AwTypevalue,CreatedDate,UpdatedDate,CreatedBy,TSICode,SOM_CODE,RSM_CODE,ASM_CODE,promocode) OUTPUT INSERTED.RowID VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
                         $aws = $this->dbw->query($tsql4, $params4);
                         $awslId = $aws->resultArrayList;
                         $applawcodeIds[] = $awslId[0]['RowID'];
                     }
+                    $params5=[$OnSaleOffValue];
+                    $tsql5="INSERT PromotionsaleProduct(saleprodlevel) OUTPUT INSERTED.RowID VALUES(?)";
+                    $promotionSaleProductExec=$this->dbw->query($tsql5,$params5);
+                    $promotionSaleProductResult=$promotionSaleProductExec->resultArrayList;
+                    $promotionSaleProduct=$promotionSaleProductResult[0]['RowID'];
 
-                    $res = ['data'=>['budget'=>$budgetId[0]['RowID'], 'channel'=>$channelId[0]['RowID'], 'details'=>$detailsIds, 'awslId' => $applawcodeIds ]];
+                    $res = ['data'=>['budget'=>$budgetId[0]['RowID'], 'channel'=>$channelIds, 'details'=>$detailsIds, 'awslId' => $applawcodeIds,'promotionSaleProduct'=>$promotionSaleProduct]];
                     $this->responseOk($res);
                 }
                 
