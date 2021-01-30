@@ -2,6 +2,17 @@
 
 
 class PromotionBudgetDetailsModel extends BaseModel {
+
+    public function testMail() {
+        try{
+            $to = ['sajal@xelpmoc.in', 'ajitesh.mandal@xelpmoc.in'];
+            $this->sendSmtpMail("Test subject", "Test Body from <b>sajal</b>", $to);
+            $this->responseOk(['mail'=>'send','to'=> $to]);
+        }
+        catch (Exception $e) {
+            $this->responseErr($e->getMessage());
+        }
+    }  
    
     public function doInsert() {
         try{

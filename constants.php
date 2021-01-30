@@ -40,3 +40,10 @@ define("iss","slate-jwt");               //issuer
 // define("aud","http://test.com");     //audience
 define("iat",1356999524);              //not before
 define("nbf",1357000000);             //expiration time
+define("MAIL_SMTP_HOST", "smtp.gmail.com");
+define("MAIL_SMTP_AUTH", TRUE);
+define("MAIL_SMTP_USER", "sajal@techl33t.in");
+define("MAIL_SMTP_PASS", ""); //>>
+define("MAIL_SMTP_PORT", "587");
+define("MAIL_SMTP_FROM", "sajal@techl33t.in");
+define("MAIL_SMTP_FROM_USER", "TSIM");
